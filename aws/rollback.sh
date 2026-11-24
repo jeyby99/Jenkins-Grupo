@@ -1,24 +1,31 @@
 #!/usr/bin/env bash
 # Uso: bash rollback.sh
-# Vuelve a calculadora:anterior y recrea el contenedor.
+# Vuelve a calculadora:anterior y recrea el contenedor. Usa
+# reemplazar_contenedor de desplegar.sh (misma carpeta).
 set -euo pipefail
 
-CALC_DIR="${CALC_DIR:-/home/ec2-user/calculadora}"
-DOCKER="${DOCKER:-docker}"
-ENV_FILE="$CALC_DIR/calculadora.env"
+# shellcheck source=desplegar.sh
+source "$(dirname "${BASH_SOURCE[0]}")/desplegar.sh"
 
-# $DOCKER sin comillas a proposito: las pruebas lo cambian por "bash docker_falso.sh".
 if ! $DOCKER image inspect calculadora:anterior > /dev/null 2>&1; then
     echo "No hay versión anterior para volver"
     exit 1
 fi
 
-$DOCKER tag calculadora:anterior calculadora:actual
+if [ ! -f "$CALC_DIR/calculadora.env" ]; then
+    echo "Falta $CALC_DIR/calculadora.env: no se puede recrear el contenedor"
+    exit 1
+fi
 
-# Mismas opciones que desplegar.sh
-$DOCKER rm -f calculadora > /dev/null 2>&1 || true
-$DOCKER run -d --name calculadora --restart unless-stopped \
-    -p 80:8000 -v calculadora-datos:/app/instance \
-    --env-file "$ENV_FILE" calculadora:actual > /dev/null
+# Si actual y anterior son la misma imagen, volver no cambiaria nada.
+id_anterior="$($DOCKER image inspect --format '{{.Id}}' calculadora:anterior)"
+id_actual="$($DOCKER image inspect --format '{{.Id}}' calculadora:actual 2> /dev/null || true)"
+if [ "$id_anterior" = "$id_actual" ]; then
+    echo "Ya se está usando la versión anterior"
+    exit 1
+fi
+
+$DOCKER tag calculadora:anterior calculadora:actual
+reemplazar_contenedor calculadora:actual
 
 echo "Vuelta a la versión anterior"
