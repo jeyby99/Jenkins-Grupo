@@ -83,7 +83,7 @@ Hazlo en el aula, con la red del aula.
 - [ ] Pestañas abiertas, en este orden:
       1. Jenkins (http://localhost:8080)
       2. GitHub: repo `jeyby99/Jenkins-Grupo` (con los 3 issues a mano)
-      3. SonarCloud: el proyecto, con el *hotspot* de `app/config.py` (regla `python:S2068`)
+      3. SonarCloud: el proyecto, con la vulnerabilidad de `app/config.py` (regla `python:S2068`)
       4. `http://<IP-ELASTICA>`
 - [ ] VS Code abierto con `app/config.py`, `app/tarifas.py`, `app/rutas.py` y el
       `Jenkinsfile`. Terminal en la carpeta del repo.
@@ -97,8 +97,8 @@ Hazlo en el aula, con la red del aula.
 |-----|----------|-----------|----------------|--------|
 | 0–1.5 | Jenkins por dentro | "Esto es Jenkins. Un controlador que manda y dos agentes que trabajan: uno de Python y uno con navegador. Los secretos viven aquí; en el repo solo hay sus nombres." | Pestaña Jenkins → **Administrar Jenkins → Nodos** (2 en línea). Luego **Credenciales** (solo IDs, sin abrir ninguna). Luego el job `calculadora-pasajes` y sus ramas | Captura de pantalla de los nodos |
 | 1.5–4 | Cambio en `main` → webhook → 3 rojos | "Subo un cambio pequeño. GitHub avisa por webhook y Jenkins arranca solo. La calidad corre en paralelo en los dos agentes." Mientras corre, recorre el `Jenkinsfile`: `parallel`, `agent`, `catchError`, `input`, `triggers`. | Terminal: `git switch main`, `git pull origin main`, `git commit --allow-empty -m "Dispara la demo"`, `git push origin main`. En Jenkins: rama `main` → vista de etapas | Esperar hasta 2 min (pollSCM) o **Construir ahora** en `main` |
-| 4–6 | Leer los 3 rojos | "Tres revisiones, tres fallos a la vez. Cada una atrapó un error distinto." | Etapa **Unitarias** → resultados de pytest (falla la tarifa del 1 de enero). Etapa **SonarCloud** → *hotspot* en `app/config.py` (`python:S2068`). **Navegador** → artefactos → captura con el error 500 | Abrir la ejecución anterior guardada en `main` |
-| 6–8 | Corregir en `jenkins-correcciones` y empezar la ejecución | "Son tres líneas. Cada commit menciona su issue y GitHub los enlaza." Al empujar (~min 7) la calidad tarda 2-3 min: llénalos explicando cada arreglo, el *hotspot* de Sonar, los issues y el PR, y las etapas del `Jenkinsfile`. | Ver la sección siguiente. Al final `git push origin jenkins-correcciones`. En Jenkins: rama `jenkins-correcciones` | `git push origin respaldo-correcciones:jenkins-correcciones --force-with-lease` |
+| 4–6 | Leer los 3 rojos | "Tres revisiones, tres fallos a la vez. Cada una atrapó un error distinto." | Etapa **Unitarias** → resultados de pytest (falla la tarifa del 1 de enero). Etapa **SonarCloud** → vulnerabilidad `python:S2068` en `app/config.py`. El Quality Gate solo revisa código nuevo, por eso el pipeline tiene su propia revisión de credenciales (`ci/revisar_secretos.py`). **Navegador** → artefactos → captura con el error 500 | Abrir la ejecución anterior guardada en `main` |
+| 6–8 | Corregir en `jenkins-correcciones` y empezar la ejecución | "Son tres líneas. Cada commit menciona su issue y GitHub los enlaza." Al empujar (~min 7) la calidad tarda 2-3 min: llénalos explicando cada arreglo, la vulnerabilidad de Sonar, los issues y el PR, y las etapas del `Jenkinsfile`. | Ver la sección siguiente. Al final `git push origin jenkins-correcciones`. En Jenkins: rama `jenkins-correcciones` | `git push origin respaldo-correcciones:jenkins-correcciones --force-with-lease` |
 | 8–10.5 | Aprobación → AWS → salud OK → app | "Todo verde. Ahora decide una persona. Aprobamos y la imagen viaja por SSH hasta la EC2." | En la etapa **Aprobación** pulsa **Desplegar** (rápido: el timeout global de 20 min incluye la espera). Mientras esperas explica: la aprobación es una puerta humana; la imagen viaja por SSH con `docker save`, sin registro; en el registro el host y la clave salen como `****`; la verificación de salud hace hasta 5 intentos y, si falla, vuelve a la versión anterior. Mira **Desplegar** y **Verificar salud** (si la app responde, es inmediato; una verificación que falla tarda ~20-45 s, 5 intentos, antes del rollback). Abre `http://<IP-ELASTICA>`, entra con el usuario de demo y calcula un pasaje (2 viajes, 20 días, fecha 2027-01-01): con las correcciones da **$16.00** (40 pasajes × $0.40). **Regla de corte:** si al minuto 10 la ejecución aún no está verde, abre la ejecución verde guardada de `jenkins-correcciones` y sigue desde ahí | Video de respaldo |
 | 10.5–12 | Multi-nube, rollback, cron y PR | "El destino es un parámetro: Azure es simulado, y lo decimos. Si la salud falla, Jenkins vuelve solo a la versión anterior." | Abre la ejecución guardada con `DESTINO=azure-ejemplo` (aviso `SIMULADO`). Luego la de `SIMULAR_FALLA_SALUD` y lee: "La verificación de salud falló: se volvió a la versión anterior". Enseña `cron` en el `Jenkinsfile`. En GitHub abre el PR `jenkins-correcciones` → `main`: marca verde y issues enlazados | Video o capturas de esas ejecuciones |
 
@@ -121,7 +121,7 @@ Un commit por corrección y un solo `push` al final.
 Archivo `app/config.py`, línea 13. Cambia:
 
 ```python
-DB_PASSWORD = "admin123"
+DB_PASSWORD = "Qu1t0-Pasaje-2026!"
 ```
 
 por:

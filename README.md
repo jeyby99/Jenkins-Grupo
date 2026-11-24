@@ -120,7 +120,7 @@ Con los errores intencionales, `pytest` muestra **3 pruebas en rojo**:
 Al corregir los errores 2 y 3, todo queda en verde (20 pruebas).
 Con el error 3 se ve la página "Internal Server Error" de Flask: a propósito
 no hay una página de error personalizada, para que en la demo se vea el 500. El error 1 no lo detecta
-pytest: lo marca SonarQube como *Security Hotspot*.
+pytest: lo marca SonarCloud como vulnerabilidad (regla `python:S2068`, "Credentials should not be hard-coded").
 
 ## Comandos útiles
 

@@ -14,7 +14,7 @@ prueba hecha). Graba la pantalla completa y tu voz. No muestres `jenkins/.env`, 
 | 2 | Cambio en `main` | `git commit --allow-empty -m "Dispara la demo"` y `git push origin main` | 0.5 min |
 | 3 | Webhook y calidad en paralelo | Jenkins arranca solo; vista de etapas con las dos ramas corriendo a la vez | 1 min |
 | 4 | Recorrido del Jenkinsfile | `parallel`, `agent`, `catchError`, `input`, `triggers`, mientras corre la ejecución | 1.5 min |
-| 5 | Los 3 rojos | Tres etapas en rojo (Unitarias, SonarCloud, Navegador). Reporte de pytest (tarifa). SonarCloud: *hotspot* en `app/config.py` (`python:S2068`). Captura de Playwright con el error 500 | 2 min |
+| 5 | Los 3 rojos | Tres etapas en rojo (Unitarias, SonarCloud, Navegador). Reporte de pytest (tarifa). SonarCloud: vulnerabilidad `python:S2068` en `app/config.py`. Captura de Playwright con el error 500 | 2 min |
 | 6 | Corrección del error 1 | `app/config.py` línea 13 y commit con `(#1)` | 0.7 min |
 | 7 | Corrección del error 2 | `app/tarifas.py` línea 24 y commit con `(#2)` | 0.7 min |
 | 8 | Corrección del error 3 | `app/rutas.py` líneas 44-45, commit con `(#3)` y `git push origin jenkins-correcciones` | 0.8 min |
