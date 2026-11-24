@@ -36,6 +36,8 @@ pipeline {
         // La etiqueta de la imagen (IMAGEN_TAG) se define en 'Construir imagen':
         // GIT_COMMIT solo existe después del checkout en un agente.
         APP = 'calculadora'
+        // Opciones de SSH en un solo lugar: no preguntar por la huella y no esperar más de 10 s.
+        SSH_OPTS = '-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10'
     }
 
     stages {
@@ -96,6 +98,112 @@ pipeline {
                             junit allowEmptyResults: true, testResults: 'reporte-e2e.xml'
                             archiveArtifacts artifacts: 'test-results/**', allowEmptyArchive: true
                             cleanWs()
+                        }
+                    }
+                }
+            }
+        }
+
+        // Solo se construye y se despliega si toda la calidad quedó en verde.
+        stage('Construir imagen') {
+            agent { label 'python' }
+            when {
+                beforeAgent true
+                expression { currentBuild.currentResult == 'SUCCESS' }
+            }
+            steps {
+                // GIT_COMMIT ya existe: el checkout se hizo al entrar al agente.
+                script { env.IMAGEN_TAG = "${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}" }
+                // La imagen queda en el Docker de la laptop; 'Desplegar' la reutiliza.
+                sh 'docker build -t calculadora:${IMAGEN_TAG} .'
+            }
+        }
+
+        // Sin agente: esperar la aprobación no ocupa ningún ejecutor.
+        stage('Aprobación') {
+            agent none
+            when { expression { currentBuild.currentResult == 'SUCCESS' } }
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    input message: "¿Desplegar ${params.DESTINO}?", ok: 'Desplegar'
+                }
+            }
+        }
+
+        stage('Desplegar') {
+            agent { label 'python' }
+            when {
+                beforeAgent true
+                expression { currentBuild.currentResult == 'SUCCESS' }
+            }
+            steps {
+                script {
+                    switch (params.DESTINO) {
+                        case 'aws':
+                            // El host y la clave vienen de credenciales: el registro muestra ****.
+                            // Comillas simples: el secreto lo expande el shell, no Groovy.
+                            withCredentials([string(credentialsId: 'ec2-demo-host', variable: 'HOST'),
+                                             string(credentialsId: 'calculadora-secret-key', variable: 'SECRET_KEY')]) {
+                                sshagent(['ec2-demo-ssh']) {
+                                    // Copia los scripts (rollback.sh usa funciones de desplegar.sh).
+                                    sh 'scp $SSH_OPTS aws/desplegar.sh aws/rollback.sh ec2-user@$HOST:calculadora/'
+                                    // Envía la imagen comprimida por SSH, sin registro de imágenes.
+                                    sh 'docker save calculadora:$IMAGEN_TAG | gzip | ssh $SSH_OPTS ec2-user@$HOST "gunzip | docker load"'
+                                    // La clave viaja por la entrada estándar, nunca como argumento.
+                                    sh 'printf "%s" "$SECRET_KEY" | ssh $SSH_OPTS ec2-user@$HOST "bash calculadora/desplegar.sh $IMAGEN_TAG"'
+                                }
+                            }
+                            break
+                        case 'azure-ejemplo':
+                            echo '===== SIMULADO: no se ejecuta ====='
+                            echo 'Así se desplegaría en Azure (credencial: azure-sp-ejemplo):'
+                            echo 'az login --service-principal --username $AZURE_CLIENT_ID --password $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID   # azure-sp-ejemplo'
+                            echo 'az webapp config container set --name calculadora --resource-group demo --docker-custom-image-name calculadora:' + env.IMAGEN_TAG
+                            break
+                        case 'gcp-ejemplo':
+                            echo '===== SIMULADO: no se ejecuta ====='
+                            echo 'Así se desplegaría en Google Cloud (credencial: gcp-sa-ejemplo):'
+                            echo 'gcloud auth activate-service-account --key-file=$GCP_SA_KEY   # gcp-sa-ejemplo'
+                            echo 'gcloud run deploy calculadora --image=calculadora:' + env.IMAGEN_TAG + ' --region=us-central1'
+                            break
+                        default:
+                            error("Destino desconocido: ${params.DESTINO}")
+                    }
+                }
+            }
+        }
+
+        stage('Verificar salud') {
+            agent { label 'python' }
+            when {
+                beforeAgent true
+                expression { currentBuild.currentResult == 'SUCCESS' && params.DESTINO == 'aws' }
+            }
+            environment {
+                // /no-existe devuelve 404: sirve para ver el rollback en vivo.
+                RUTA = "${params.SIMULAR_FALLA_SALUD ? '/no-existe' : '/login'}"
+            }
+            steps {
+                withCredentials([string(credentialsId: 'ec2-demo-host', variable: 'HOST')]) {
+                    script {
+                        // 5 intentos, 5 segundos entre uno y otro.
+                        def estado = sh(returnStatus: true, script: '''
+                            for i in 1 2 3 4 5; do
+                                if curl -fsS -o /dev/null --max-time 5 "http://$HOST$RUTA"; then
+                                    echo "Intento $i: la app responde"
+                                    exit 0
+                                fi
+                                echo "Intento $i de 5: sin respuesta"
+                                [ "$i" -lt 5 ] && sleep 5
+                            done
+                            exit 1
+                        ''')
+                        if (estado != 0) {
+                            // Falló la salud: se vuelve a la versión anterior.
+                            sshagent(['ec2-demo-ssh']) {
+                                sh 'ssh $SSH_OPTS ec2-user@$HOST "bash calculadora/rollback.sh"'
+                            }
+                            error('La verificación de salud falló: se volvió a la versión anterior')
                         }
                     }
                 }
