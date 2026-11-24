@@ -21,6 +21,7 @@ jenkins:
         mode: EXCLUSIVE
         launcher:
           inbound:
+            webSocket: true
             workDirSettings:
               disabled: false
               internalDir: "remoting"
@@ -33,6 +34,7 @@ jenkins:
         mode: EXCLUSIVE
         launcher:
           inbound:
+            webSocket: true
             workDirSettings:
               disabled: false
               internalDir: "remoting"
@@ -63,7 +65,7 @@ jobs:
                 credentialsId('github-token')
                 traits {
                   gitHubBranchDiscovery {
-                    strategyId(1)
+                    strategyId(3)
                   }
                 }
               }
