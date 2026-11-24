@@ -1,6 +1,6 @@
 """Configuración compartida de las pruebas.
 
-El fixture `url_base` levanta la calculadora en un hilo aparte (puerto 5001)
+El fixture `url_base` levanta la calculadora en un hilo aparte (en un puerto libre que elige el sistema)
 para que las pruebas de navegador tengan una página real que abrir.
 Así no hace falta ejecutar `python run.py` antes de las pruebas,
 y Jenkins puede correr todo con un solo comando.
@@ -25,8 +25,8 @@ def url_base(tmp_path_factory):
         "SQLALCHEMY_DATABASE_URI": f"sqlite:///{ruta_bd.as_posix()}",
     })
 
-    servidor = make_server("127.0.0.1", 5001, app, threaded=True)
+    servidor = make_server("127.0.0.1", 0, app, threaded=True)
     hilo = threading.Thread(target=servidor.serve_forever, daemon=True)
     hilo.start()
-    yield "http://127.0.0.1:5001"
+    yield f"http://127.0.0.1:{servidor.server_port}"
     servidor.shutdown()
