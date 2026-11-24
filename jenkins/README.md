@@ -39,14 +39,33 @@ Jenkins oculta los secretos en los registros (`****`).
 
 ## Secreto de cada agente
 
-Los agentes se conectan al controlador con un secreto que genera Jenkins:
+Los agentes se conectan al controlador con un secreto que genera Jenkins. Lo más simple
+es sacarlo de la consola de scripts (**Administrar Jenkins → Consola de scripts**):
 
-1. Entra a **Administrar Jenkins → Nodos → `agente-python`**.
-2. Verás una línea de comando con `-secret <valor largo>`. Copia solo ese valor.
-3. Pégalo en `jenkins/.env` como `SECRETO_AGENTE_PYTHON=<valor>`.
-4. Repite con `agente-browser` y `SECRETO_AGENTE_BROWSER`.
+```groovy
+println jenkins.model.Jenkins.get().getComputer('agente-python').getJnlpMac()
+println jenkins.model.Jenkins.get().getComputer('agente-browser').getJnlpMac()
+```
+
+Pega cada valor en `jenkins/.env` como `SECRETO_AGENTE_PYTHON=<valor>` y
+`SECRETO_AGENTE_BROWSER=<valor>`. (También aparece en **Nodos → el agente**, en la línea
+con `-secret`.) Luego levanta todo:
+
+```powershell
+docker compose up -d --build
+```
+
+## Los agentes
+
+- `agente-python` (etiqueta `python`): Python 3.12, sonar-scanner, cliente `docker`
+  (usa el socket de Docker Desktop), `ssh`, `scp` y `curl`.
+- `agente-browser` (etiqueta `browser`): Python 3.12 y Chromium de Playwright
+  (imagen oficial de Playwright; la versión de `playwright` en `requirements.txt` debe
+  coincidir con la de la imagen en `agentes/browser.Dockerfile`).
+- Ambos comparten el volumen `pip-cache` para no descargar paquetes en cada ejecución.
+- Simplificación de demo: `agente-python` corre como root y monta
+  `/var/run/docker.sock` para poder construir imágenes. No es una práctica de producción.
 
 ## Pendiente (próximos pasos)
 
-- Los contenedores de los agentes se agregan al `docker-compose.yml` más adelante.
-- `SMEE_URL` es para el relé de webhooks de GitHub, que también se agrega después.
+- `SMEE_URL` es para el relé de webhooks de GitHub, que se agrega después.

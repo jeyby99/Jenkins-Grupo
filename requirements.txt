@@ -6,4 +6,5 @@ flask-sqlalchemy>=3.1
 # Pruebas
 pytest>=8.0
 pytest-cov>=5.0
-pytest-playwright>=0.5
+playwright==1.65.2
+pytest-playwright==0.10.0

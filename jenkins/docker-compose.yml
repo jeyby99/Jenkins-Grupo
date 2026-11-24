@@ -10,5 +10,39 @@ services:
       - jenkins_home:/var/jenkins_home
     mem_limit: 1536m
 
+  agente-python:
+    build:
+      context: .
+      dockerfile: agentes/python.Dockerfile
+    container_name: jenkins-agente-python
+    restart: unless-stopped
+    depends_on:
+      - controlador
+    environment:
+      JENKINS_URL: http://controlador:8080
+      NOMBRE: agente-python
+      SECRETO: ${SECRETO_AGENTE_PYTHON}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - pip-cache:/root/.cache/pip
+    mem_limit: 1024m
+
+  agente-browser:
+    build:
+      context: .
+      dockerfile: agentes/browser.Dockerfile
+    container_name: jenkins-agente-browser
+    restart: unless-stopped
+    depends_on:
+      - controlador
+    environment:
+      JENKINS_URL: http://controlador:8080
+      NOMBRE: agente-browser
+      SECRETO: ${SECRETO_AGENTE_BROWSER}
+    volumes:
+      - pip-cache:/root/.cache/pip
+    mem_limit: 2048m
+
 volumes:
   jenkins_home:
+  pip-cache:
