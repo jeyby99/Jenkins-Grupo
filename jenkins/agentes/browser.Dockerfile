@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/playwright/python:v1.65.2-noble
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends openjdk-21-jre-headless git curl \
+ && apt-get install -y --no-install-recommends openjdk-21-jre-headless git curl python3-venv \
  && rm -rf /var/lib/apt/lists/*
 
 # La imagen trae solo los navegadores: el paquete debe tener la misma versión que la imagen
