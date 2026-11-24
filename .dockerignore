@@ -1,0 +1,8 @@
+.venv
+tests
+jenkins
+docs
+aws
+ci
+.git
+instance
