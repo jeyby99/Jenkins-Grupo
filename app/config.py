@@ -10,7 +10,7 @@ Corrección: leerla de una variable de entorno, por ejemplo
 import os
 
 DB_USER = "calculadora"
-DB_PASSWORD = "admin123"
+DB_PASSWORD = "Qu1t0-Pasaje-2026!"
 
 
 class Config:
