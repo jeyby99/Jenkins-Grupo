@@ -1,7 +1,7 @@
 // Pipeline de Jenkins: calidad, construcción, aprobación y despliegue.
 // Cada vez que alguien sube código, Jenkins corre las revisiones en paralelo,
 // en dos agentes distintos:
-//   - agente 'python':  pruebas unitarias + SonarCloud
+//   - agente 'python':  pruebas unitarias, luego SonarCloud
 //   - agente 'browser': pruebas de navegador (Playwright)
 // Si una revisión falla, las otras igual terminan: así vemos todos los errores
 // de una sola vez.
@@ -47,32 +47,46 @@ pipeline {
         stage('Calidad') {
             // Las dos ramas corren al mismo tiempo, cada una en su agente.
             parallel {
-                stage('Unitarias y Sonar') {
+                stage('Python') {
                     agent { label 'python' }
-                    steps {
-                        sh '''
-                            python3.12 -m venv .venv
-                            . .venv/bin/activate
-                            pip install -r requirements.txt
-                        '''
-                        // catchError marca la etapa en rojo pero deja seguir:
-                        // así SonarCloud corre aunque pytest falle.
-                        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                            sh '''
-                                . .venv/bin/activate
-                                pytest tests/unitarias tests/despliegue --cov=app --cov-report=xml --junitxml=reporte-unitarias.xml
-                            '''
+                    // Dos etapas seguidas en el mismo agente: cada una se ve roja por separado.
+                    stages {
+                        stage('Unitarias') {
+                            steps {
+                                sh '''
+                                    python3.12 -m venv .venv
+                                    . .venv/bin/activate
+                                    pip install -r requirements.txt
+                                '''
+                                // catchError marca la etapa en rojo pero deja seguir:
+                                // así SonarCloud corre aunque pytest falle.
+                                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                                    sh '''
+                                        . .venv/bin/activate
+                                        pytest tests/unitarias tests/despliegue --cov=app --cov-report=xml --junitxml=reporte-unitarias.xml
+                                    '''
+                                }
+                            }
+                            post {
+                                always {
+                                    junit allowEmptyResults: true, testResults: 'reporte-unitarias.xml'
+                                }
+                            }
                         }
-                        // Análisis de SonarCloud; espera el veredicto del Quality Gate.
-                        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
-                            withSonarQubeEnv('SonarCloud') {
-                                sh 'sonar-scanner -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=180'
+
+                        stage('SonarCloud') {
+                            steps {
+                                // Análisis de SonarCloud; espera el veredicto del Quality Gate.
+                                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                                    withSonarQubeEnv('SonarCloud') {
+                                        sh 'sonar-scanner -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=180'
+                                    }
+                                }
                             }
                         }
                     }
                     post {
                         always {
-                            junit allowEmptyResults: true, testResults: 'reporte-unitarias.xml'
                             cleanWs()   // deja limpio el espacio de trabajo del agente
                         }
                     }
@@ -121,6 +135,7 @@ pipeline {
                 // La etiqueta hace único el ID de cada imagen: así el rollback siempre tiene algo distinto a qué volver.
                 sh 'docker build --label org.opencontainers.image.revision=${IMAGEN_TAG} -t calculadora:${IMAGEN_TAG} .'
             }
+            post { always { cleanWs() } }
         }
 
         // Sin agente: esperar la aprobación no ocupa ningún ejecutor.
@@ -182,6 +197,7 @@ printf "%s" "$SECRET_KEY" | ssh $SSH_OPTS ec2-user@$HOST "bash calculadora/despl
                     }
                 }
             }
+            post { always { cleanWs() } }
         }
 
         stage('Verificar salud') {
@@ -221,6 +237,7 @@ printf "%s" "$SECRET_KEY" | ssh $SSH_OPTS ec2-user@$HOST "bash calculadora/despl
                     }
                 }
             }
+            post { always { cleanWs() } }
         }
     }
 
