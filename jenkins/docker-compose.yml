@@ -4,8 +4,9 @@ services:
     container_name: jenkins-controlador
     restart: unless-stopped
     ports:
-      - "8080:8080"
-    env_file: .env
+      - "127.0.0.1:8080:8080"
+    environment:
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD}
     volumes:
       - jenkins_home:/var/jenkins_home
     mem_limit: 1536m
@@ -53,7 +54,8 @@ services:
     profiles: ["webhook"]
     depends_on:
       - controlador
-    env_file: .env
+    environment:
+      SMEE_URL: ${SMEE_URL:-}
     command:
       - sh
       - -c
