@@ -79,7 +79,15 @@ pipeline {
                                 // Análisis de SonarCloud; espera el veredicto del Quality Gate.
                                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                                     withSonarQubeEnv('SonarCloud') {
-                                        sh 'sonar-scanner -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=180'
+                                        // El plan gratis solo muestra resultados de la rama main: se analiza todo como main.
+                                        sh 'sonar-scanner -Dsonar.branch.name=main -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=180'
+                                    }
+                                }
+                                // El Quality Gate solo mira código nuevo: este paso pone la etapa en rojo
+                                // si SonarCloud encuentra una credencial escrita en el código.
+                                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                                    withCredentials([string(credentialsId: 'sonarcloud-token', variable: 'SONAR_TOKEN')]) {
+                                        sh '. .venv/bin/activate && python ci/revisar_secretos.py --proyecto jeyby99_Jenkins-Grupo'
                                     }
                                 }
                             }
