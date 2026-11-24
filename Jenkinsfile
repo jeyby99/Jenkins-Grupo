@@ -1,10 +1,13 @@
-// Pipeline de Jenkins: la parte de calidad.
+// Pipeline de Jenkins: calidad, construcción, aprobación y despliegue.
 // Cada vez que alguien sube código, Jenkins corre las revisiones en paralelo,
 // en dos agentes distintos:
 //   - agente 'python':  pruebas unitarias + SonarCloud
 //   - agente 'browser': pruebas de navegador (Playwright)
 // Si una revisión falla, las otras igual terminan: así vemos todos los errores
 // de una sola vez.
+// Si todo queda en verde: se construye la imagen, se pide aprobación, se
+// despliega (aws de verdad; azure y gcp son simulados) y se verifica la salud,
+// con vuelta a la versión anterior si falla.
 
 pipeline {
     // Sin agente global: cada rama paralela pide el suyo.
@@ -115,7 +118,8 @@ pipeline {
                 // GIT_COMMIT ya existe: el checkout se hizo al entrar al agente.
                 script { env.IMAGEN_TAG = "${env.GIT_COMMIT.take(7)}-${env.BUILD_NUMBER}" }
                 // La imagen queda en el Docker de la laptop; 'Desplegar' la reutiliza.
-                sh 'docker build -t calculadora:${IMAGEN_TAG} .'
+                // La etiqueta hace único el ID de cada imagen: así el rollback siempre tiene algo distinto a qué volver.
+                sh 'docker build --label org.opencontainers.image.revision=${IMAGEN_TAG} -t calculadora:${IMAGEN_TAG} .'
             }
         }
 
@@ -148,9 +152,16 @@ pipeline {
                                     // Copia los scripts (rollback.sh usa funciones de desplegar.sh).
                                     sh 'scp $SSH_OPTS aws/desplegar.sh aws/rollback.sh ec2-user@$HOST:calculadora/'
                                     // Envía la imagen comprimida por SSH, sin registro de imágenes.
-                                    sh 'docker save calculadora:$IMAGEN_TAG | gzip | ssh $SSH_OPTS ec2-user@$HOST "gunzip | docker load"'
+                                    // Con bash y pipefail: si falla cualquier parte de la tubería, falla el paso.
+                                    sh '''#!/bin/bash
+set -eo pipefail
+docker save calculadora:$IMAGEN_TAG | gzip | ssh $SSH_OPTS ec2-user@$HOST "gunzip | docker load"
+'''
                                     // La clave viaja por la entrada estándar, nunca como argumento.
-                                    sh 'printf "%s" "$SECRET_KEY" | ssh $SSH_OPTS ec2-user@$HOST "bash calculadora/desplegar.sh $IMAGEN_TAG"'
+                                    sh '''#!/bin/bash
+set -eo pipefail
+printf "%s" "$SECRET_KEY" | ssh $SSH_OPTS ec2-user@$HOST "bash calculadora/desplegar.sh $IMAGEN_TAG"
+'''
                                 }
                             }
                             break
@@ -201,9 +212,11 @@ pipeline {
                         if (estado != 0) {
                             // Falló la salud: se vuelve a la versión anterior.
                             sshagent(['ec2-demo-ssh']) {
-                                sh 'ssh $SSH_OPTS ec2-user@$HOST "bash calculadora/rollback.sh"'
+                                // returnStatus: si el rollback falla, igual mostramos el mensaje correcto.
+                                def r = sh(returnStatus: true, script: 'ssh $SSH_OPTS ec2-user@$HOST "bash calculadora/rollback.sh"')
+                                error(r == 0 ? 'La verificación de salud falló: se volvió a la versión anterior'
+                                             : 'La verificación de salud falló y no se pudo volver a la versión anterior (ver registro)')
                             }
-                            error('La verificación de salud falló: se volvió a la versión anterior')
                         }
                     }
                 }
