@@ -31,28 +31,47 @@ Hazlo en el aula, con la red del aula.
 - [ ] Revisa que existan las credenciales (solo mira los IDs): `sonarcloud-token`,
       `ec2-demo-ssh`, `ec2-demo-host`, `calculadora-secret-key`, `github-token`,
       `azure-sp-ejemplo`, `gcp-sa-ejemplo`.
-- [ ] **Ejecución de prueba** en `main` hasta el final con `DESTINO=aws` (en `main` la
-      calidad falla; para llegar al despliegue haz la prueba en `jenkins-correcciones`
-      con las correcciones puestas, y luego deja la rama otra vez igual a `main`).
-      Sirve para calentar las imágenes y el caché de pip, y deja una versión
-      desplegada en la EC2.
-- [ ] Deja guardadas dos ejecuciones para el minuto 10.5 (plan B y material para
-      enseñar): una con `DESTINO=azure-ejemplo` y otra con `SIMULAR_FALLA_SALUD=true`.
-      El rollback necesita una versión anterior distinta en la EC2: con la ejecución de
-      prueba ya hay una. Anota sus números de ejecución.
-- [ ] **Aborta cualquier ejecución que esté esperando en "Aprobación".** Las ejecuciones
+- [ ] **Ejecución de prueba** en `jenkins-correcciones` con las 3 correcciones puestas
+      (la rama `main` falla la calidad a propósito y nunca llega al despliegue). Elige
+      `DESTINO=aws` y pulsa **Desplegar** en "Aprobación". Sirve para calentar las
+      imágenes y el caché de pip, y deja una versión desplegada en la EC2. Después
+      restaura la rama:
+      ```powershell
+      git switch jenkins-correcciones
+      git reset --hard main
+      git push --force-with-lease origin jenkins-correcciones
+      ```
+- [ ] Deja guardadas ejecuciones para el minuto 10.5 y como plan B. Hazlas en
+      `jenkins-correcciones` con las correcciones puestas (calidad en verde), antes de
+      restaurarla:
+      1. Una ejecución verde de `DESTINO=aws` (para el corte del minuto 9).
+      2. Una con `DESTINO=azure-ejemplo`.
+      3. Una con `SIMULAR_FALLA_SALUD=true`, **después** de un despliegue aws exitoso
+         (el rollback necesita una versión anterior distinta en la EC2; si es el primer
+         despliegue, termina con "no se pudo volver a la versión anterior").
+      Cada una necesita un clic en **Desplegar** en "Aprobación". Entra a cada una y
+      pulsa **Mantener esta ejecución para siempre**: Jenkins guarda solo las últimas 15
+      y las ejecuciones del cron, del pollSCM o abortadas las sacarían. Anota sus números.
+- [ ] **Aborta (no apruebes) cualquier ejecución que esté esperando en "Aprobación".** Las ejecuciones
       automáticas (webhook, pollSCM cada 2 min, cron de lunes a viernes ~7 h) arrancan con
       `DESTINO=aws` y se detienen ahí; terminan en ABORTED a los 10 min. Como no se
       permiten ejecuciones simultáneas, las nuevas hacen cola detrás de ellas.
-- [ ] Prepara la rama de respaldo (plan B de las correcciones):
+- [ ] Prepara la rama de respaldo (plan B de las correcciones). `main` y `jenkins` serán
+      idénticas al publicar: usa `main` como única base.
       ```powershell
       git fetch origin
-      git rebase jenkins respaldo-correcciones    # usa la rama más reciente: jenkins o main
+      git rebase main respaldo-correcciones
       ```
       Sin este rebase, el `push --force-with-lease` del plan B no sirve: la rama
       quedaría sin los últimos cambios.
-- [ ] Deja `jenkins-correcciones` igual a `main`, subida a GitHub y visible en Jenkins como
-      rama descubierta. Revisa con `git log --oneline -3`.
+- [ ] Deja `jenkins-correcciones` igual a `origin/main` y subida a GitHub. La primera vez
+      en tu laptop: `git fetch origin` y `git switch jenkins-correcciones`. Revisa con
+      `git log --oneline -3` que apunta al mismo commit que `origin/main`.
+- [ ] Comprueba el webhook: `docker compose logs smee` sin errores y un push de prueba
+      (`git commit --allow-empty`) que cree una ejecución nueva en menos de ~15 s. Si no
+      llega, pollSCM (cada 2 min) es el respaldo. Aborta la ejecución de prueba.
+- [ ] Crea en la app un usuario de demo (por ejemplo `demo`, con una clave que no uses en
+      ningún otro sitio) en `http://<IP-ELASTICA>` o prepárate para registrarlo en vivo.
 - [ ] Pestañas abiertas, en este orden:
       1. Jenkins (http://localhost:8080)
       2. GitHub: repo `Jeyby99/Jenkins-Grupo4` (con los 3 issues a mano)
@@ -71,15 +90,17 @@ Hazlo en el aula, con la red del aula.
 | 0–1.5 | Jenkins por dentro | "Esto es Jenkins. Un controlador que manda y dos agentes que trabajan: uno de Python y uno con navegador. Los secretos viven aquí; en el repo solo hay sus nombres." | Pestaña Jenkins → **Administrar Jenkins → Nodos** (2 en línea). Luego **Credenciales** (solo IDs, sin abrir ninguna). Luego el job `calculadora-pasajes` y sus ramas | Captura de pantalla de los nodos |
 | 1.5–4 | Cambio en `main` → webhook → 3 rojos | "Subo un cambio pequeño. GitHub avisa por webhook y Jenkins arranca solo. La calidad corre en paralelo en los dos agentes." Mientras corre, recorre el `Jenkinsfile`: `parallel`, `agent`, `catchError`, `input`, `triggers`. | Terminal: `git switch main`, `git commit --allow-empty -m "Dispara la demo"`, `git push origin main`. En Jenkins: rama `main` → vista de etapas | Esperar hasta 2 min (pollSCM) o **Construir ahora** en `main` |
 | 4–6 | Leer los 3 rojos | "Tres revisiones, tres fallos a la vez. Cada una atrapó un error distinto." | **Unitarias y Sonar** → resultados de pytest (falla la tarifa del 1 de enero). Pestaña SonarCloud → *hotspot* en `app/config.py` (`python:S2068`). **Navegador** → artefactos → captura con el error 500 | Abrir la ejecución anterior guardada en `main` |
-| 6–8 | Corregir en `jenkins-correcciones` y ver verde | "Son tres líneas. Cada commit menciona su issue y GitHub los enlaza." | Ver la sección siguiente. Al final `git push origin jenkins-correcciones`. En Jenkins: rama `jenkins-correcciones` | `git push origin respaldo-correcciones:jenkins-correcciones --force-with-lease` |
-| 8–10.5 | Aprobación → AWS → salud OK → app | "Todo verde. Ahora decide una persona. Aprobamos y la imagen viaja por SSH hasta la EC2." | En la etapa **Aprobación** pulsa **Desplegar** (rápido: el timeout global de 20 min incluye la espera). Mira **Desplegar** y **Verificar salud**. Abre `http://<IP-ELASTICA>`, entra y calcula un pasaje (2 viajes, 20 días, fecha 2027-01-01) | Video de respaldo |
-| 10.5–12 | Multi-nube, rollback, cron y PR | "El destino es un parámetro: Azure es simulado, y lo decimos. Si la salud falla, Jenkins vuelve solo a la versión anterior." | Abre la ejecución guardada con `DESTINO=azure-ejemplo` (aviso `SIMULADO`). Luego la de `SIMULAR_FALLA_SALUD` y lee: "La verificación de salud falló: se volvió a la versión anterior". Enseña `cron` en el `Jenkinsfile`. En GitHub abre el PR `jenkins-correcciones` → `main`: marca verde y issues enlazados | Las mismas ejecuciones anteriores |
+| 6–8 | Corregir en `jenkins-correcciones` y empezar la ejecución | "Son tres líneas. Cada commit menciona su issue y GitHub los enlaza." Al empujar (~min 7) la calidad tarda 2-3 min: llénalos explicando cada arreglo, el *hotspot* de Sonar, los issues y el PR, y las etapas del `Jenkinsfile`. | Ver la sección siguiente. Al final `git push origin jenkins-correcciones`. En Jenkins: rama `jenkins-correcciones` | `git push origin respaldo-correcciones:jenkins-correcciones --force-with-lease` |
+| 8–10.5 | Aprobación → AWS → salud OK → app | "Todo verde. Ahora decide una persona. Aprobamos y la imagen viaja por SSH hasta la EC2." | En la etapa **Aprobación** pulsa **Desplegar** (rápido: el timeout global de 20 min incluye la espera). Mira **Desplegar** y **Verificar salud** (hasta 25 s). Abre `http://<IP-ELASTICA>`, entra con el usuario de demo y calcula un pasaje (2 viajes, 20 días, fecha 2027-01-01). **Regla de corte:** si al minuto 9 la ejecución aún no está verde, abre la ejecución verde guardada de `jenkins-correcciones` y sigue desde ahí | Video de respaldo |
+| 10.5–12 | Multi-nube, rollback, cron y PR | "El destino es un parámetro: Azure es simulado, y lo decimos. Si la salud falla, Jenkins vuelve solo a la versión anterior." | Abre la ejecución guardada con `DESTINO=azure-ejemplo` (aviso `SIMULADO`). Luego la de `SIMULAR_FALLA_SALUD` y lee: "La verificación de salud falló: se volvió a la versión anterior". Enseña `cron` en el `Jenkinsfile`. En GitHub abre el PR `jenkins-correcciones` → `main`: marca verde y issues enlazados | Video o capturas de esas ejecuciones |
 
 Notas de tiempo:
 
 - La etapa de calidad dura 2-3 min. Por eso en el minuto 10.5–12 se muestran
   ejecuciones ya hechas: lanzar una nueva y esperarla no cabe.
 - Si vas atrasado, deja el PR para el final y sáltate el cron.
+- Los tiempos reales: push ~min 7, verde ~min 9.5-10, despliegue y salud ~min 10.5. Por eso
+  la regla de corte del minuto 9 y el material guardado del último tramo.
 - Al llegar al minuto 12, cierra aunque falte algo.
 
 ## Las 3 correcciones en vivo
@@ -160,8 +181,8 @@ si quieres, ciérralos a mano.
 | Problema | Qué hacer |
 |----------|-----------|
 | El webhook no llega y la ejecución no arranca | Espera hasta 2 min: `pollSCM` revisa el repo solo. O abre la rama y pulsa **Construir ahora**. Mientras, sigue con el `Jenkinsfile`. |
-| Hay una ejecución vieja esperando en "Aprobación" y la nueva está en cola | Ábrela y aprueba o aborta a propósito. Decide rápido. |
-| El push de las correcciones falla o se te traba el tecleo | `git push origin respaldo-correcciones:jenkins-correcciones --force-with-lease`. Solo funciona si antes hiciste `git rebase jenkins respaldo-correcciones` (ver "Antes"). Di: "Tengo las mismas correcciones ya preparadas". |
+| Hay una ejecución vieja esperando en "Aprobación" y la nueva está en cola | Ábrela y **aborta** (no apruebes). Decide rápido. |
+| El push de las correcciones falla o se te traba el tecleo | `git push origin respaldo-correcciones:jenkins-correcciones --force-with-lease`. Solo funciona si antes hiciste `git rebase main respaldo-correcciones` (ver "Antes"). Di: "Tengo las mismas correcciones ya preparadas". |
 | La calidad o el despliegue tardan demasiado | Abre la ejecución anterior guardada y cuenta desde ahí. |
 | SSH a la EC2 se rechaza o se agota | Casi seguro es la regla del puerto 22: cambió tu IP. Pon "Mi IP" de nuevo en el Security Group. Si no hay tiempo, pasa al video. |
 | Es el primer despliegue en esa EC2 y se pide el rollback | Termina con "La verificación de salud falló y no se pudo volver a la versión anterior (ver registro)". Por eso la ejecución de prueba y el despliegue verde van antes. |
