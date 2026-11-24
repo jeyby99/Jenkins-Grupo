@@ -57,7 +57,7 @@ services:
     command:
       - sh
       - -c
-      - exec npx --yes smee-client@5.0.0 --url "$$SMEE_URL" --target http://controlador:8080/github-webhook/
+      - exec npx --yes smee-client@5.0.0 --url "$${SMEE_URL:?Falta SMEE_URL en jenkins/.env}" --target http://controlador:8080/github-webhook/
     mem_limit: 256m
 
 volumes:

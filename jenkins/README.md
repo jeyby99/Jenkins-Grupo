@@ -72,7 +72,8 @@ GitHub no puede llegar a tu laptop, así que el servicio `smee` (smee-client 5.0
 recibe los avisos desde smee.io y los reenvía a `http://controlador:8080/github-webhook/`.
 
 1. Entra a https://smee.io y pulsa **Start a new channel**. Copia el URL del canal.
-2. Pégalo en `jenkins/.env` como `SMEE_URL=<url del canal>`.
+2. Pégalo en `jenkins/.env` como `SMEE_URL=<url del canal>`. Debe estar puesto antes
+   del paso 4; si falta, el contenedor se detiene con "Falta SMEE_URL en jenkins/.env".
 3. En GitHub: **Settings → Webhooks → Add webhook**.
    - *Payload URL*: el mismo URL de smee.
    - *Content type*: `application/json`.
@@ -83,6 +84,9 @@ recibe los avisos desde smee.io y los reenvía a `http://controlador:8080/github
    docker compose up -d smee
    ```
 
+   Si después editas `.env`, vuelve a ejecutar `docker compose up -d smee` para que el
+   contenedor tome el valor nuevo.
+
 5. Haz un commit pequeño en la rama `jenkins` y súbelo. Para confirmar, mira los registros:
 
    ```powershell
@@ -90,3 +94,5 @@ recibe los avisos desde smee.io y los reenvía a `http://controlador:8080/github
    ```
 
    La ejecución de `calculadora-pasajes` debe empezar en menos de 15 segundos.
+   Segunda confirmación: en GitHub, **Settings → Webhooks → Recent Deliveries** debe
+   mostrar la entrega con respuesta 200. Si falla, revisa `docker compose logs smee`.
