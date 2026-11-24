@@ -19,8 +19,9 @@ Abre http://localhost:8080 e inicia sesión con el usuario `admin` y la contrase
 inicio el job multirrama `calculadora-pasajes` (origen `Jeyby99/Jenkins-Grupo4`).
 El escaneo del repo fallará hasta que exista en GitHub y exista la credencial `github-token`.
 
-`jenkins/.env` está en `.gitignore`: nunca se sube al repo.
-
+`jenkins/.env` está en `.gitignore`: nunca se sube al repo. Cada servicio recibe solo
+las variables que necesita (`environment:` en el compose), y Jenkins solo escucha en
+`127.0.0.1:8080`: no se puede abrir desde otros equipos de la red.
 ## Credenciales (se crean a mano)
 
 En **Administrar Jenkins → Credenciales → Global → Add Credentials**. El repo solo
@@ -32,7 +33,7 @@ guarda los IDs; los valores no están en ningún archivo.
 | `ec2-demo-ssh` | Usuario + llave privada SSH | `ec2-user` de la EC2 de la demo |
 | `ec2-demo-host` | Texto secreto | IP elástica de la EC2 |
 | `calculadora-secret-key` | Texto secreto | `SECRET_KEY` de Flask en producción |
-| `github-token` | Usuario + token | estado del commit en GitHub (marca verde/roja) |
+| `github-token` | Usuario + token | estado del commit en GitHub (marca verde/roja). Token clásico: `repo:status` + `public_repo` (repo público). Token fine-grained: Commit statuses: Read and write, Contents: Read-only, Metadata: Read-only |
 | `azure-sp-ejemplo`, `gcp-sa-ejemplo` | Texto secreto con valor de relleno | solo para mostrar cómo se haría; nunca son reales |
 
 Jenkins oculta los secretos en los registros (`****`).
