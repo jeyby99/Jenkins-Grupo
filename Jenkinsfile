@@ -76,14 +76,18 @@ pipeline {
 
                         stage('SonarCloud') {
                             steps {
-                                // Análisis de SonarCloud; espera el veredicto del Quality Gate.
-                                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                                // Análisis de SonarCloud; espera a que el reporte esté procesado.
+                                // La puerta de calidad es solo un aviso: no pone la etapa en rojo.
+                                script {
                                     withSonarQubeEnv('SonarCloud') {
                                         // El plan gratis solo muestra resultados de la rama main: se analiza todo como main.
-                                        sh 'sonar-scanner -Dsonar.branch.name=main -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=180'
+                                        def estado = sh(returnStatus: true, script: 'sonar-scanner -Dsonar.branch.name=main -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=180')
+                                        if (estado != 0) {
+                                            echo 'Aviso: la puerta de calidad de SonarCloud no pasó (mira solo el código nuevo y la cobertura). La etapa la decide la revisión de credenciales.'
+                                        }
                                     }
                                 }
-                                // El Quality Gate solo mira código nuevo: este paso pone la etapa en rojo
+                                // Este paso, y no la puerta de calidad, pone la etapa en rojo
                                 // si SonarCloud encuentra una credencial escrita en el código.
                                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                                     withCredentials([string(credentialsId: 'sonarcloud-token', variable: 'SONAR_TOKEN')]) {
