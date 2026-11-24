@@ -1,0 +1,14 @@
+services:
+  controlador:
+    build: ./controlador
+    container_name: jenkins-controlador
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file: .env
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    mem_limit: 1536m
+
+volumes:
+  jenkins_home:

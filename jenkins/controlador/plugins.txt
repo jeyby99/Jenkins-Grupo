@@ -1,0 +1,13 @@
+workflow-aggregator:608.v67378e9d3db_1
+git:5.11.0
+github:1.47.0
+github-branch-source:1988.v87ea_66346560
+configuration-as-code:2147.v8a_8d38668c72
+job-dsl:3752.vb_199526b_20c3
+credentials-binding:728.v902a_273b_8947
+ssh-agent:433.v9e73d67c3f74
+sonar:2.19.1
+junit:1458.1460.vd53b_087eeb_2c
+timestamper:1.30
+ws-cleanup:0.49
+pipeline-graph-view:1053.v9df19e6ceed2

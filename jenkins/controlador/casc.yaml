@@ -1,0 +1,88 @@
+jenkins:
+  systemMessage: "Jenkins de la demo de la calculadora de pasajes (configurado como código)"
+  numExecutors: 0
+  mode: EXCLUSIVE
+  slaveAgentPort: 50000
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+  nodes:
+    - permanent:
+        name: "agente-python"
+        remoteFS: "/home/jenkins/agent"
+        numExecutors: 2
+        labelString: "python"
+        mode: EXCLUSIVE
+        launcher:
+          inbound:
+            workDirSettings:
+              disabled: false
+              internalDir: "remoting"
+              failIfWorkDirIsMissing: false
+    - permanent:
+        name: "agente-browser"
+        remoteFS: "/home/jenkins/agent"
+        numExecutors: 2
+        labelString: "browser"
+        mode: EXCLUSIVE
+        launcher:
+          inbound:
+            workDirSettings:
+              disabled: false
+              internalDir: "remoting"
+              failIfWorkDirIsMissing: false
+
+unclassified:
+  location:
+    url: "http://localhost:8080/"
+  sonarGlobalConfiguration:
+    installations:
+      - name: "SonarCloud"
+        serverUrl: "https://sonarcloud.io"
+        credentialsId: "sonarcloud-token"
+
+jobs:
+  - script: |
+      multibranchPipelineJob('calculadora-pasajes') {
+        displayName('Calculadora de pasajes')
+        branchSources {
+          branchSource {
+            source {
+              github {
+                id('calculadora-pasajes-github')
+                repoOwner('Jeyby99')
+                repository('Jenkins-Grupo4')
+                repositoryUrl('https://github.com/Jeyby99/Jenkins-Grupo4')
+                configuredByUrl(false)
+                credentialsId('github-token')
+                traits {
+                  gitHubBranchDiscovery {
+                    strategyId(1)
+                  }
+                }
+              }
+            }
+          }
+        }
+        factory {
+          workflowBranchProjectFactory {
+            scriptPath('Jenkinsfile')
+          }
+        }
+        orphanedItemStrategy {
+          discardOldItems {
+            numToKeep(15)
+          }
+        }
+        triggers {
+          periodicFolderTrigger {
+            interval('1d')
+          }
+        }
+      }
