@@ -42,6 +42,23 @@ services:
     volumes:
       - pip-cache:/root/.cache/pip
     mem_limit: 2048m
+    shm_size: 1gb
+
+  # Relé de webhooks: smee.io -> controlador. Solo arranca si lo nombras
+  # (docker compose up -d smee); un "up" normal no lo levanta.
+  smee:
+    image: node:22.23.5-alpine
+    container_name: jenkins-smee
+    restart: unless-stopped
+    profiles: ["webhook"]
+    depends_on:
+      - controlador
+    env_file: .env
+    command:
+      - sh
+      - -c
+      - exec npx --yes smee-client@5.0.0 --url "$$SMEE_URL" --target http://controlador:8080/github-webhook/
+    mem_limit: 256m
 
 volumes:
   jenkins_home:

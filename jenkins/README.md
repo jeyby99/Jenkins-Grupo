@@ -66,6 +66,27 @@ docker compose up -d --build
 - Simplificación de demo: `agente-python` corre como root y monta
   `/var/run/docker.sock` para poder construir imágenes. No es una práctica de producción.
 
-## Pendiente (próximos pasos)
+## Webhook de GitHub (smee)
 
-- `SMEE_URL` es para el relé de webhooks de GitHub, que se agrega después.
+GitHub no puede llegar a tu laptop, así que el servicio `smee` (smee-client 5.0.0)
+recibe los avisos desde smee.io y los reenvía a `http://controlador:8080/github-webhook/`.
+
+1. Entra a https://smee.io y pulsa **Start a new channel**. Copia el URL del canal.
+2. Pégalo en `jenkins/.env` como `SMEE_URL=<url del canal>`.
+3. En GitHub: **Settings → Webhooks → Add webhook**.
+   - *Payload URL*: el mismo URL de smee.
+   - *Content type*: `application/json`.
+   - Eventos: **Just the push event** (solo `push`).
+4. Levanta el relé (usa un perfil, por eso hay que nombrarlo):
+
+   ```powershell
+   docker compose up -d smee
+   ```
+
+5. Haz un commit pequeño en la rama `jenkins` y súbelo. Para confirmar, mira los registros:
+
+   ```powershell
+   docker compose logs controlador | Select-String "Received PushEvent"
+   ```
+
+   La ejecución de `calculadora-pasajes` debe empezar en menos de 15 segundos.
