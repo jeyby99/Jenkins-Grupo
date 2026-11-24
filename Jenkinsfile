@@ -33,8 +33,9 @@ pipeline {
     }
 
     environment {
-        IMAGEN_TAG = "${GIT_COMMIT.take(7)}-${BUILD_NUMBER}"
-        APP        = 'calculadora'
+        // La etiqueta de la imagen (IMAGEN_TAG) se define en 'Construir imagen':
+        // GIT_COMMIT solo existe después del checkout en un agente.
+        APP = 'calculadora'
     }
 
     stages {
