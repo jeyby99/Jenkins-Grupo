@@ -58,9 +58,9 @@ jobs:
             source {
               github {
                 id('calculadora-pasajes-github')
-                repoOwner('Jeyby99')
-                repository('Jenkins-Grupo4')
-                repositoryUrl('https://github.com/Jeyby99/Jenkins-Grupo4')
+                repoOwner('jeyby99')
+                repository('Jenkins-Grupo')
+                repositoryUrl('https://github.com/jeyby99/Jenkins-Grupo')
                 configuredByUrl(false)
                 credentialsId('github-token')
                 traits {

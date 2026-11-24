@@ -82,7 +82,7 @@ Hazlo en el aula, con la red del aula.
       Sin este rebase, el `push --force-with-lease` del plan B no sirve.
 - [ ] Pestañas abiertas, en este orden:
       1. Jenkins (http://localhost:8080)
-      2. GitHub: repo `Jeyby99/Jenkins-Grupo4` (con los 3 issues a mano)
+      2. GitHub: repo `jeyby99/Jenkins-Grupo` (con los 3 issues a mano)
       3. SonarCloud: el proyecto, con el *hotspot* de `app/config.py` (regla `python:S2068`)
       4. `http://<IP-ELASTICA>`
 - [ ] VS Code abierto con `app/config.py`, `app/tarifas.py`, `app/rutas.py` y el

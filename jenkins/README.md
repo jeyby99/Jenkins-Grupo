@@ -16,7 +16,7 @@ docker compose up -d --build controlador
 Abre http://localhost:8080 e inicia sesión con el usuario `admin` y la contraseña de
 `JENKINS_ADMIN_PASSWORD`. En **Administrar Jenkins → Nodos** verás `agente-python`
 (etiqueta `python`) y `agente-browser` (etiqueta `browser`) desconectados, y en el
-inicio el job multirrama `calculadora-pasajes` (origen `Jeyby99/Jenkins-Grupo4`).
+inicio el job multirrama `calculadora-pasajes` (origen `jeyby99/Jenkins-Grupo`).
 El escaneo del repo fallará hasta que exista en GitHub y exista la credencial `github-token`.
 
 `jenkins/.env` está en `.gitignore`: nunca se sube al repo. Cada servicio recibe solo
