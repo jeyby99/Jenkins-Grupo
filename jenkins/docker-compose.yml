@@ -22,11 +22,13 @@ services:
     environment:
       JENKINS_URL: http://controlador:8080
       NOMBRE: agente-python
+      # El escáner de SonarCloud necesita más que el heap por defecto (1/4 del límite = 256 MB)
+      SONAR_SCANNER_JAVA_OPTS: -Xmx1g
       SECRETO: ${SECRETO_AGENTE_PYTHON}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - pip-cache:/root/.cache/pip
-    mem_limit: 1024m
+    mem_limit: 1536m
 
   agente-browser:
     build:
