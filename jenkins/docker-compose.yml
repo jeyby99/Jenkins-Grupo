@@ -58,10 +58,12 @@ services:
       - controlador
     environment:
       SMEE_URL: ${SMEE_URL:-}
+    # smee-client quita la "/" final del destino; Jenkins responde 302 a /github-webhook/
+    # y fetch repite la petición como GET (405). El "?origen=smee" conserva la barra.
     command:
       - sh
       - -c
-      - exec npx --yes smee-client@5.0.0 --url "$${SMEE_URL:?Falta SMEE_URL en jenkins/.env}" --target http://controlador:8080/github-webhook/
+      - exec npx --yes smee-client@5.0.0 --url "$${SMEE_URL:?Falta SMEE_URL en jenkins/.env}" --target "http://controlador:8080/github-webhook/?origen=smee"
     mem_limit: 256m
 
 volumes:
