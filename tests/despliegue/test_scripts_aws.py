@@ -66,7 +66,8 @@ def test_primer_despliegue_sin_actual(entorno):
     assert "tag calculadora:actual calculadora:anterior" not in texto
     run = [l for l in lineas(log) if l.startswith("run")]
     assert run
-    assert "-p 80:8000" in run[0]
+    assert "-p 8090:8000" in run[0]
+    assert "--memory 192m" in run[0]
     assert f"--env-file {(carpeta / 'calculadora.env').as_posix()}" in run[0]
     assert "calculadora-datos:/app/instance" in run[0]
 
@@ -158,3 +159,13 @@ def test_rollback_sin_archivo_env_falla_sin_tocar_el_contenedor(entorno):
     assert r.returncode == 1
     assert "calculadora.env" in r.stdout + r.stderr
     assert not any(l.startswith(("rm", "run")) for l in lineas(log))
+
+
+def test_el_puerto_se_puede_cambiar(entorno):
+    env, log, imagenes, _ = entorno
+    poner_imagenes(imagenes, ["calculadora:abc-9"])
+    env["PUERTO"] = "8095"
+    r = ejecutar("desplegar.sh", env, ["abc-9"], "clave")
+    assert r.returncode == 0, r.stderr
+    run = [l for l in lineas(log) if l.startswith("run")]
+    assert "-p 8095:8000" in run[0]

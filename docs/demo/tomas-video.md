@@ -21,7 +21,7 @@ prueba hecha). Graba la pantalla completa y tu voz. No muestres `jenkins/.env`, 
 | 9 | Ejecución en verde | Rama `jenkins-correcciones`: calidad en verde y construcción de la imagen | 1.5 min |
 | 10 | Aprobación | Etapa **Aprobación** y clic en **Desplegar** | 0.5 min |
 | 11 | Despliegue en AWS | **Desplegar** (imagen por SSH, `****` en el registro) y **Verificar salud** en verde | 1 min |
-| 12 | La app en la nube | `http://<IP-ELASTICA>`: entrar y calcular un pasaje (2 viajes, 20 días, 2027-01-01): resultado **$16.00** (40 pasajes × $0.40) | 0.8 min |
+| 12 | La app en la nube | `http://<IP-EC2>:8090`: entrar y calcular un pasaje (2 viajes, 20 días, 2027-01-01): resultado **$16.00** (40 pasajes × $0.40) | 0.8 min |
 | 13 | Multi-nube | Ejecución con `DESTINO=azure-ejemplo`: aviso `SIMULADO: no se ejecuta` | 0.7 min |
 | 14 | Rollback | Ejecución con `SIMULAR_FALLA_SALUD=true`: "La verificación de salud falló: se volvió a la versión anterior" | 1 min |
 | 15 | Cron y PR | `cron` en el `Jenkinsfile`; PR `jenkins-correcciones` → `main` con la marca verde y los issues #1, #2 y #3. Sin fusionar | 0.8 min |

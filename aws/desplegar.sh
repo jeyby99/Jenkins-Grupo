@@ -11,13 +11,17 @@ set -euo pipefail
 
 CALC_DIR="${CALC_DIR:-/home/ec2-user/calculadora}"
 DOCKER="${DOCKER:-docker}"
+# La EC2 se comparte con PrograWeb: el 80 lo usa Apache y el 8080-8083 PrograWeb.
+# La calculadora va en el 8090 y con tope de memoria para no quitarle RAM a PrograWeb.
+PUERTO="${PUERTO:-8090}"
+MEMORIA="${MEMORIA:-192m}"
 
 # Unica definicion de las opciones del contenedor. Uso: reemplazar_contenedor <imagen>
 # $DOCKER sin comillas a proposito: las pruebas lo cambian por "bash docker_falso.sh".
 reemplazar_contenedor() {
     $DOCKER rm -f calculadora > /dev/null 2>&1 || true
     $DOCKER run -d --name calculadora --restart unless-stopped \
-        -p 80:8000 -v calculadora-datos:/app/instance \
+        -p "$PUERTO:8000" --memory "$MEMORIA" -v calculadora-datos:/app/instance \
         --env-file "$CALC_DIR/calculadora.env" "$1" > /dev/null
 }
 

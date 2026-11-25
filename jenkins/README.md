@@ -30,8 +30,8 @@ guarda los IDs; los valores no están en ningún archivo.
 | ID | Tipo | Para qué |
 |----|------|----------|
 | `sonarcloud-token` | Texto secreto | sonar-scanner |
-| `ec2-demo-ssh` | Usuario + llave privada SSH | `ec2-user` de la EC2 de la demo |
-| `ec2-demo-host` | Texto secreto | IP elástica de la EC2 |
+| `ec2-demo-ssh` | Usuario + llave privada SSH | `ec2-user` de la EC2 (compartida con PrograWeb) |
+| `ec2-demo-host` | Texto secreto | IP pública de la EC2 (la app queda en el puerto 8090) |
 | `calculadora-secret-key` | Texto secreto | `SECRET_KEY` de Flask en producción |
 | `github-token` | Usuario + token | estado del commit en GitHub (marca verde/roja). Token clásico: `repo:status` + `public_repo` (repo público). Token fine-grained: Commit statuses: Read and write, Contents: Read-only, Metadata: Read-only |
 | `azure-sp-ejemplo`, `gcp-sa-ejemplo` | Texto secreto con valor de relleno | solo para mostrar cómo se haría; nunca son reales |

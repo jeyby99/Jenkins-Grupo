@@ -13,10 +13,14 @@ Hazlo en el aula, con la red del aula.
 
 - [ ] Enciende el Learner Lab y espera a que la EC2 esté en *running*. La sesión dura
       4 h: no la enciendas más temprano de lo necesario.
-- [ ] En AWS, **Security Group** de la EC2 de la demo: edita la regla del puerto 22 y
+- [ ] La demo usa la EC2 de PrograWeb (compartida): la calculadora va en el puerto
+      **8090** (el 80 es de Apache y el 8080-8083 de PrograWeb).
+- [ ] En AWS, **Security Group** de esa EC2: edita la regla del puerto 22 y
       ponla en **Mi IP** *desde la red del aula*. En otra red tu IP cambia y el SSH
-      queda bloqueado. El puerto 80 queda abierto. La IP elástica no cambia.
-- [ ] Prueba el SSH desde tu laptop: `ssh -i <tu-llave>.pem ec2-user@<IP-ELASTICA> "docker ps"`
+      queda bloqueado. El puerto 8090 queda abierto a todos.
+- [ ] Si la EC2 no tiene IP elástica, su IP pública cambia cada vez que el lab se
+      apaga: actualiza la credencial `ec2-demo-host` con la IP nueva.
+- [ ] Prueba el SSH desde tu laptop: `ssh -i <tu-llave>.pem ec2-user@<IP-EC2> "docker ps"`
       (no dejes el `.pem` ni el comando a la vista).
 - [ ] Levanta Jenkins:
       ```powershell
@@ -49,7 +53,7 @@ Hazlo en el aula, con la red del aula.
          `git fetch origin` y `git switch jenkins-correcciones` para tenerla en local.
       2. **Ejecución verde con `DESTINO=aws`**: la que acabas de lanzar. Pulsa
          **Desplegar** en "Aprobación". Deja una versión en la EC2. Entra a
-         `http://<IP-ELASTICA>` y registra el usuario de demo (por ejemplo `demo`, con una
+         `http://<IP-EC2>:8090` y registra el usuario de demo (por ejemplo `demo`, con una
          clave que no uses en otro sitio): el volumen de la EC2 lo conserva.
       3. **Ejecución guardada con `DESTINO=azure-ejemplo`**
          (**Construir con parámetros**) y clic en **Desplegar**.
@@ -84,7 +88,7 @@ Hazlo en el aula, con la red del aula.
       1. Jenkins (http://localhost:8080)
       2. GitHub: repo `jeyby99/Jenkins-Grupo` (con los 3 issues a mano)
       3. SonarCloud: el proyecto, con la vulnerabilidad de `app/config.py` (regla `python:S2068`)
-      4. `http://<IP-ELASTICA>`
+      4. `http://<IP-EC2>:8090`
 - [ ] VS Code abierto con `app/config.py`, `app/tarifas.py`, `app/rutas.py` y el
       `Jenkinsfile`. Terminal en la carpeta del repo.
 - [ ] Internet: si el aula falla, hotspot del celular (y recuerda que la regla del
@@ -99,7 +103,7 @@ Hazlo en el aula, con la red del aula.
 | 1.5–4 | Cambio en `main` → webhook → 3 rojos | "Subo un cambio pequeño. GitHub avisa por webhook y Jenkins arranca solo. La calidad corre en paralelo en los dos agentes." Mientras corre, recorre el `Jenkinsfile`: `parallel`, `agent`, `catchError`, `input`, `triggers`. | Terminal: `git switch main`, `git pull origin main`, `git commit --allow-empty -m "Dispara la demo"`, `git push origin main`. En Jenkins: rama `main` → vista de etapas | Esperar hasta 2 min (pollSCM) o **Construir ahora** en `main` |
 | 4–6 | Leer los 3 rojos | "Tres revisiones, tres fallos a la vez. Cada una atrapó un error distinto." | Etapa **Unitarias** → resultados de pytest (falla la tarifa del 1 de enero). Etapa **SonarCloud** → vulnerabilidad `python:S2068` en `app/config.py`. El Quality Gate solo revisa código nuevo y se muestra como aviso informativo; la etapa se pone en rojo por la revisión de credenciales del pipeline (`ci/revisar_secretos.py`), que reporta `python:S2068` en `app/config.py:13`. **Navegador** → artefactos → captura con el error 500 | Abrir la ejecución anterior guardada en `main` |
 | 6–8 | Corregir en `jenkins-correcciones` y empezar la ejecución | "Son tres líneas. Cada commit menciona su issue y GitHub los enlaza." Al empujar (~min 7) la calidad tarda 3-4 min: llénalos explicando cada arreglo, la vulnerabilidad de Sonar, los issues y el PR, y las etapas del `Jenkinsfile`. | Ver la sección siguiente. Al final `git push origin jenkins-correcciones`. En Jenkins: rama `jenkins-correcciones` | `git push origin respaldo-correcciones:jenkins-correcciones --force-with-lease` |
-| 8–10.5 | Aprobación → AWS → salud OK → app | "Todo verde. Ahora decide una persona. Aprobamos y la imagen viaja por SSH hasta la EC2." | En la etapa **Aprobación** pulsa **Desplegar** (rápido: el timeout global de 20 min incluye la espera). Mientras esperas explica: la aprobación es una puerta humana; la imagen viaja por SSH con `docker save`, sin registro; en el registro el host y la clave salen como `****`; la verificación de salud hace hasta 5 intentos y, si falla, vuelve a la versión anterior. Mira **Desplegar** y **Verificar salud** (si la app responde, es inmediato; una verificación que falla tarda ~20-45 s, 5 intentos, antes del rollback). Abre `http://<IP-ELASTICA>`, entra con el usuario de demo y calcula un pasaje (2 viajes, 20 días, fecha 2027-01-01): con las correcciones da **$16.00** (40 pasajes × $0.40). **Regla de corte:** si al minuto 10 la ejecución aún no está verde, abre la ejecución verde guardada de `jenkins-correcciones` y sigue desde ahí | Video de respaldo |
+| 8–10.5 | Aprobación → AWS → salud OK → app | "Todo verde. Ahora decide una persona. Aprobamos y la imagen viaja por SSH hasta la EC2." | En la etapa **Aprobación** pulsa **Desplegar** (rápido: el timeout global de 20 min incluye la espera). Mientras esperas explica: la aprobación es una puerta humana; la imagen viaja por SSH con `docker save`, sin registro; en el registro el host y la clave salen como `****`; la verificación de salud hace hasta 5 intentos y, si falla, vuelve a la versión anterior. Mira **Desplegar** y **Verificar salud** (si la app responde, es inmediato; una verificación que falla tarda ~20-45 s, 5 intentos, antes del rollback). Abre `http://<IP-EC2>:8090`, entra con el usuario de demo y calcula un pasaje (2 viajes, 20 días, fecha 2027-01-01): con las correcciones da **$16.00** (40 pasajes × $0.40). **Regla de corte:** si al minuto 10 la ejecución aún no está verde, abre la ejecución verde guardada de `jenkins-correcciones` y sigue desde ahí | Video de respaldo |
 | 10.5–12 | Multi-nube, rollback, cron y PR | "El destino es un parámetro: Azure es simulado, y lo decimos. Si la salud falla, Jenkins vuelve solo a la versión anterior." | Abre la ejecución guardada con `DESTINO=azure-ejemplo` (aviso `SIMULADO`). Luego la de `SIMULAR_FALLA_SALUD` y lee: "La verificación de salud falló: se volvió a la versión anterior". Enseña `cron` en el `Jenkinsfile`. En GitHub abre el PR `jenkins-correcciones` → `main`: marca verde y issues enlazados | Video o capturas de esas ejecuciones |
 
 Notas de tiempo:
@@ -203,6 +207,6 @@ si quieres, ciérralos a mano.
 - [ ] Aborta cualquier ejecución que siga esperando en "Aprobación".
 - [ ] **Apaga el lab** (AWS Academy → *End Lab*).
 - [ ] `docker compose --profile webhook down` en `jenkins/` (sin `-v`, para conservar el historial).
-- [ ] **Al terminar el semestre: libera la IP elástica.** Con la instancia apagada cobra
-      cerca de USD 3.6 al mes.
+- [ ] **Al terminar el semestre:** si la EC2 tiene IP elástica, libérala. Con la
+      instancia apagada cobra cerca de USD 3.6 al mes.
 - [ ] No fusiones el PR de `jenkins-correcciones`.

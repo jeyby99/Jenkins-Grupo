@@ -41,6 +41,8 @@ pipeline {
         APP = 'calculadora'
         // Opciones de SSH en un solo lugar: no preguntar por la huella y no esperar más de 10 s.
         SSH_OPTS = '-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10'
+        // Puerto público de la app en la EC2 (compartida con PrograWeb, que usa 80 y 8080-8083).
+        APP_PUERTO = '8090'
     }
 
     stages {
@@ -177,6 +179,7 @@ pipeline {
                                              string(credentialsId: 'calculadora-secret-key', variable: 'SECRET_KEY')]) {
                                 sshagent(['ec2-demo-ssh']) {
                                     // Copia los scripts (rollback.sh usa funciones de desplegar.sh).
+                                    sh 'ssh $SSH_OPTS ec2-user@$HOST "mkdir -p calculadora"'
                                     sh 'scp $SSH_OPTS aws/desplegar.sh aws/rollback.sh ec2-user@$HOST:calculadora/'
                                     // Envía la imagen comprimida por SSH, sin registro de imágenes.
                                     // Con bash y pipefail: si falla cualquier parte de la tubería, falla el paso.
@@ -187,7 +190,7 @@ docker save calculadora:$IMAGEN_TAG | gzip | ssh $SSH_OPTS ec2-user@$HOST "gunzi
                                     // La clave viaja por la entrada estándar, nunca como argumento.
                                     sh '''#!/bin/bash
 set -eo pipefail
-printf "%s" "$SECRET_KEY" | ssh $SSH_OPTS ec2-user@$HOST "bash calculadora/desplegar.sh $IMAGEN_TAG"
+printf "%s" "$SECRET_KEY" | ssh $SSH_OPTS ec2-user@$HOST "PUERTO=$APP_PUERTO bash calculadora/desplegar.sh $IMAGEN_TAG"
 '''
                                 }
                             }
@@ -228,7 +231,7 @@ printf "%s" "$SECRET_KEY" | ssh $SSH_OPTS ec2-user@$HOST "bash calculadora/despl
                         // 5 intentos, 5 segundos entre uno y otro.
                         def estado = sh(returnStatus: true, script: '''
                             for i in 1 2 3 4 5; do
-                                if curl -fsS -o /dev/null --max-time 5 "http://$HOST$RUTA"; then
+                                if curl -fsS -o /dev/null --max-time 5 "http://$HOST:$APP_PUERTO$RUTA"; then
                                     echo "Intento $i: la app responde"
                                     exit 0
                                 fi
@@ -241,7 +244,7 @@ printf "%s" "$SECRET_KEY" | ssh $SSH_OPTS ec2-user@$HOST "bash calculadora/despl
                             // Falló la salud: se vuelve a la versión anterior.
                             sshagent(['ec2-demo-ssh']) {
                                 // returnStatus: si el rollback falla, igual mostramos el mensaje correcto.
-                                def r = sh(returnStatus: true, script: 'ssh $SSH_OPTS ec2-user@$HOST "bash calculadora/rollback.sh"')
+                                def r = sh(returnStatus: true, script: 'ssh $SSH_OPTS ec2-user@$HOST "PUERTO=$APP_PUERTO bash calculadora/rollback.sh"')
                                 error(r == 0 ? 'La verificación de salud falló: se volvió a la versión anterior'
                                              : 'La verificación de salud falló y no se pudo volver a la versión anterior (ver registro)')
                             }
